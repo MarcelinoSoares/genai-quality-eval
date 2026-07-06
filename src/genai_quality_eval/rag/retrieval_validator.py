@@ -63,12 +63,10 @@ class RetrievalValidator:
     def context_coverage(self, retrieved: List, ground_truth: List) -> float:
         """Simple token-overlap coverage between retrieved and ground-truth text."""
         retrieved_text = " ".join(
-            d.get("content", str(d)) if isinstance(d, dict) else str(d)
-            for d in retrieved
+            d.get("content", str(d)) if isinstance(d, dict) else str(d) for d in retrieved
         )
         gt_text = " ".join(
-            d.get("content", str(d)) if isinstance(d, dict) else str(d)
-            for d in ground_truth
+            d.get("content", str(d)) if isinstance(d, dict) else str(d) for d in ground_truth
         )
         gt_tokens = set(gt_text.lower().split())
         retrieved_tokens = set(retrieved_text.lower().split())

@@ -110,7 +110,5 @@ class LatencyTracker:
             "p95_ms": self.p95,
             "p99_ms": self.p99,
             "sla_threshold_ms": self.sla_threshold_ms,
-            "sla_violations": sum(
-                1 for d in self._history if d > self.sla_threshold_ms
-            ),
+            "sla_violations": sum(1 for d in self._history if d > self.sla_threshold_ms),
         }

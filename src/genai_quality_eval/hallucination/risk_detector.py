@@ -131,9 +131,7 @@ class HallucinationDetector:
         """Return sentences whose tokens are poorly covered by context."""
         context_tokens = set(self._tokenize(context))
         suspicious = []
-        for sentence in (
-            answer.replace(".", ".|").replace("!", "!|").replace("?", "?|").split("|")
-        ):
+        for sentence in answer.replace(".", ".|").replace("!", "!|").replace("?", "?|").split("|"):
             sentence = sentence.strip()
             if not sentence:
                 continue
