@@ -11,7 +11,7 @@ A **pure-Python** evaluation framework for Generative AI systems, designed to br
 
 It provides modular evaluators for response quality, hallucination risk, retrieval accuracy, latency SLAs, and prompt regression testing — so teams can detect regressions, enforce quality thresholds, and make GenAI releases more reliable.
 
-No web server. No database. Just composable modules that drop into any LLM pipeline or CI workflow.
+No web server. No database. Just composable modules that can run locally, inside automated tests, or as CI/CD quality gates.
 
 ---
 
@@ -19,7 +19,7 @@ No web server. No database. Just composable modules that drop into any LLM pipel
 
 | Problem | Solution |
 |---|---|
-| "Did the model regress after the upgrade?" | Prompt regression suite with hardcoded baselines and ≤ 5% tolerance |
+| "Did the model regress after the upgrade?" | Prompt regression suite with versioned baselines and ≤ 5% tolerance |
 | "Is this answer hallucinated?" | Heuristic context-grounding score, no LLM required |
 | "Are we hitting our latency SLA?" | Context-manager tracker with p50/p95/p99 and `assert_sla()` |
 | "How good is our RAG retrieval?" | Precision@K, Recall@K, MRR, F1, and context coverage in one call |
@@ -226,9 +226,26 @@ REGRESSION_TOLERANCE=0.10 pytest tests/regression/ -v   # 10% tolerance
 
 | Test | What it checks |
 |---|---|
-| `test_score_regression_against_baseline` | Scores must not drop > 5% vs hardcoded baselines |
+| `test_score_regression_against_baseline` | Scores must not drop > 5% vs versioned baselines |
 | `test_hallucination_regression` | Hallucination risk must stay below HIGH (< 0.60) |
 | `test_rag_retrieval_regression` | RAG Precision, Recall, F1 must all meet ≥ 0.70 |
+
+---
+
+## Example Quality Gate Output
+
+```json
+{
+  "faithfulness": 0.87,
+  "hallucination_risk": 0.18,
+  "rag_f1": 0.76,
+  "latency_p95_ms": 1840,
+  "prompt_regression_drop": 0.02,
+  "quality_gate": "passed"
+}
+```
+
+This output can be used in CI/CD pipelines to block risky GenAI releases when quality thresholds are not met.
 
 ---
 
