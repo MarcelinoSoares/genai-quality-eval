@@ -27,6 +27,17 @@ No web server. No database. Just composable modules that can run locally, inside
 
 ---
 
+## Quality Engineering Use Cases
+
+- Detect prompt regressions after model, prompt, or retrieval changes
+- Enforce latency SLAs for GenAI features in CI/CD pipelines
+- Validate RAG retrieval quality before production deployment
+- Identify hallucination risk using context-grounding heuristics
+- Compare LLM response quality across versions or providers
+- Generate quality signals for release readiness decisions
+
+---
+
 ## Architecture
 
 ```
@@ -52,7 +63,7 @@ genai-quality-eval/
 └── .github/workflows/ci.yml    # lint → unit → regression ‖ benchmarks → quality-gate
 ```
 
-Each module is **independently usable** — import only what you need.
+Each module is **independently usable** — import only what you need. See [`docs/design-decisions.md`](docs/design-decisions.md) for the engineering rationale behind key choices.
 
 ---
 
@@ -93,14 +104,14 @@ See the [`examples/`](examples/) directory for runnable scripts covering all mod
 Run the quick-start demo offline (no API key required):
 
 ```bash
-PYTHONPATH=. python examples/quick_start.py
+PYTHONPATH=src python examples/quick_start.py
 ```
 
 ---
 
 ## Modules
 
-### LLM Evaluator — `evaluators/llm_evaluator.py`
+### LLM Evaluator — `genai_quality_eval.evaluators.llm_evaluator`
 
 LLM-as-judge pattern. Calls an OpenAI model to score three dimensions and returns a structured result with a `passed` flag.
 
@@ -129,7 +140,7 @@ print(result.latency_ms)    # 1243.7
 
 ---
 
-### Hallucination Detector — `hallucination/risk_detector.py`
+### Hallucination Detector — `genai_quality_eval.hallucination.risk_detector`
 
 No LLM required. Measures how grounded an answer is in its context using token overlap and n-gram overlap heuristics.
 
@@ -164,7 +175,7 @@ Suspicious sentences (< 40% token overlap with context) are surfaced in `unverif
 
 ---
 
-### RAG Retrieval Validator — `rag/retrieval_validator.py`
+### RAG Retrieval Validator — `genai_quality_eval.rag.retrieval_validator`
 
 Validates retrieval quality for RAG pipelines. Documents are matched by their `id` field (dict) or string identity.
 
@@ -200,7 +211,7 @@ print(metrics.passed)           # False  (F1 < threshold)
 
 ---
 
-### Latency Tracker — `metrics/latency/latency_tracker.py`
+### Latency Tracker — `genai_quality_eval.metrics.latency.latency_tracker`
 
 Context-manager timer with percentile statistics and SLA enforcement. `SLAViolationError` (subclass of `AssertionError`) is raised on violation.
 
@@ -243,7 +254,7 @@ Regression detected in 'faithfulness':
 To update baselines after an intentional model change, regenerate the baseline scores, review the diff, and commit the updated values. Use `REGRESSION_TOLERANCE` to widen the tolerance window during transition:
 
 ```bash
-REGRESSION_TOLERANCE=0.10 pytest tests/regression/ -v   # 10% tolerance
+PYTHONPATH=src REGRESSION_TOLERANCE=0.10 pytest tests/regression/ -v   # 10% tolerance
 ```
 
 **Three test classes run per suite entry:**
@@ -270,17 +281,6 @@ REGRESSION_TOLERANCE=0.10 pytest tests/regression/ -v   # 10% tolerance
 ```
 
 This output can be used in CI/CD pipelines to block risky GenAI releases when quality thresholds are not met.
-
----
-
-## Quality Engineering Use Cases
-
-- Detect prompt regressions after model, prompt, or retrieval changes
-- Enforce latency SLAs for GenAI features in CI/CD pipelines
-- Validate RAG retrieval quality before production deployment
-- Identify hallucination risk using context-grounding heuristics
-- Compare LLM response quality across versions or providers
-- Generate quality signals for release readiness decisions
 
 ---
 
