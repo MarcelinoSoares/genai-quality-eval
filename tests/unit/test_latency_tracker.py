@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import pytest
 
-from metrics.latency.latency_tracker import LatencyMeasurement, LatencyTracker, SLAViolationError
+from metrics.latency.latency_tracker import (
+    LatencyMeasurement,
+    LatencyTracker,
+    SLAViolationError,
+)
 
 
 def test_measurement_passes_when_within_sla():

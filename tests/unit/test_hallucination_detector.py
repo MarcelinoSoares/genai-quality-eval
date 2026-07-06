@@ -50,7 +50,9 @@ def test_classify_risk_high(detector):
 
 
 def test_score_low_risk_verbatim(detector):
-    context = "Retrieval augmented generation retrieves relevant documents for the model."
+    context = (
+        "Retrieval augmented generation retrieves relevant documents for the model."
+    )
     answer = context  # verbatim copy → near-zero ungroundedness
     result = detector.score(answer=answer, context=context)
     assert result.risk_level == RiskLevel.LOW
