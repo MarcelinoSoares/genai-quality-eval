@@ -91,9 +91,7 @@ class LLMEvaluator:
         scores["relevance"] = self._call_llm(
             self.RELEVANCE_PROMPT.format(question=question, answer=answer)
         )
-        scores["coherence"] = self._call_llm(
-            self.COHERENCE_PROMPT.format(answer=answer)
-        )
+        scores["coherence"] = self._call_llm(self.COHERENCE_PROMPT.format(answer=answer))
         if context:
             scores["faithfulness"] = self._call_llm(
                 self.FAITHFULNESS_PROMPT.format(context=context, answer=answer)

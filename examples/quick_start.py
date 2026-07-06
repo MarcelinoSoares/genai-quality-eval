@@ -141,9 +141,7 @@ report = tracker.report()
 print(
     f"  calls={report['count']}  mean={report['mean_ms']:.1f}ms  p50={report['p50_ms']:.1f}ms  p95={report['p95_ms']:.1f}ms  p99={report['p99_ms']:.1f}ms"
 )
-print(
-    f"  sla_threshold={report['sla_threshold_ms']:.0f}ms  violations={report['sla_violations']}"
-)
+print(f"  sla_threshold={report['sla_threshold_ms']:.0f}ms  violations={report['sla_violations']}")
 
 try:
     tracker.assert_p95_sla()

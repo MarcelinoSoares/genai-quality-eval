@@ -16,16 +16,12 @@ def test_average_score_empty_scores():
 
 
 def test_average_score_computed():
-    result = EvaluationResult(
-        question="q", answer="a", scores={"relevance": 0.8, "coherence": 0.6}
-    )
+    result = EvaluationResult(question="q", answer="a", scores={"relevance": 0.8, "coherence": 0.6})
     assert result.average_score == pytest.approx(0.7)
 
 
 def test_evaluation_result_passed_flag():
-    result = EvaluationResult(
-        question="q", answer="a", scores={"relevance": 0.9}, threshold=0.75
-    )
+    result = EvaluationResult(question="q", answer="a", scores={"relevance": 0.9}, threshold=0.75)
     assert result.passed is True
 
 
