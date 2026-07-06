@@ -6,6 +6,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+[![mypy checked](https://img.shields.io/badge/mypy-checked-2A6DB2.svg)](https://mypy-lang.org/)
 
 A **pure-Python** evaluation framework for Generative AI systems, designed to bring Quality Engineering practices into LLM and RAG delivery pipelines.
 
@@ -63,7 +64,22 @@ genai-quality-eval/
 └── .github/workflows/ci.yml    # lint → unit → regression ‖ benchmarks → quality-gate
 ```
 
-Each module is **independently usable** — import only what you need. See [`docs/design-decisions.md`](docs/design-decisions.md) for the engineering rationale behind key choices.
+Each module is **independently usable**, so teams can adopt only the quality gates they need.
+
+---
+
+## Design Decisions
+
+This project intentionally combines deterministic offline checks with optional LLM-based evaluation:
+
+- **Heuristic hallucination detection** runs without API keys and is safe for CI — no network calls, no flakiness.
+- **LLM-as-judge is optional** and used for richer semantic evaluation where offline heuristics fall short.
+- **Versioned baselines** make prompt regression changes reviewable in pull requests as deliberate diffs.
+- **Explicit thresholds** encode an engineering contract — lowering one requires a code change, not a silent config update.
+- **F1 as the RAG gate**, not precision alone, prevents shallow retrieval systems from passing with one cherry-picked result.
+- **`SLAViolationError(AssertionError)`** integrates latency failures into pytest output without special handling.
+
+Full rationale in [`docs/design-decisions.md`](docs/design-decisions.md).
 
 ---
 
@@ -77,16 +93,16 @@ python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\act
 pip install -r requirements.txt
 
 # Run everything
-PYTHONPATH=src pytest tests/ -v --tb=short
+pytest tests/ -v --tb=short
 
 # Unit tests only (no LLM calls, runs offline)
-PYTHONPATH=src pytest tests/ --ignore=tests/regression -v --tb=short
+pytest tests/ --ignore=tests/regression -v --tb=short
 
 # Regression suite only
-PYTHONPATH=src pytest tests/regression/ -v --tb=long
+pytest tests/regression/ -v --tb=long
 
 # Filter by name
-PYTHONPATH=src pytest tests/ -k "latency or benchmark" -v
+pytest tests/ -k "latency or benchmark" -v
 ```
 
 ---
@@ -104,7 +120,7 @@ See the [`examples/`](examples/) directory for runnable scripts covering all mod
 Run the quick-start demo offline (no API key required):
 
 ```bash
-PYTHONPATH=src python examples/quick_start.py
+python examples/quick_start.py
 ```
 
 ---
@@ -320,6 +336,18 @@ Jobs 3 and 4 run in parallel after unit tests pass.
 | Latency p95 | ≤ 3000 ms |
 | Prompt regression | ≤ 5% degradation |
 | RAG retrieval F1 | ≥ 0.70 |
+
+### GitHub Step Summary example
+
+The quality gate job writes a summary to each pull request:
+
+| Gate | Value | Threshold | Status |
+| --- | ---: | ---: | --- |
+| Faithfulness | 0.87 | ≥ 0.80 | Passed |
+| Hallucination Risk | 0.18 | < 0.30 | Passed |
+| RAG Retrieval F1 | 0.76 | ≥ 0.70 | Passed |
+| Latency p95 | 1840 ms | ≤ 3000 ms | Passed |
+| Prompt Regression | 2% drop | ≤ 5% | Passed |
 
 ---
 
