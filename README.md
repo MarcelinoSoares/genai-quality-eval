@@ -74,6 +74,24 @@ pytest tests/ -k "latency or benchmark" -v
 
 ---
 
+## Examples
+
+See the [`examples/`](examples/) directory for runnable scripts covering all modules:
+
+- LLM-as-judge evaluation
+- Hallucination risk detection
+- RAG retrieval validation
+- Latency SLA checks
+- Prompt regression testing
+
+Run the quick-start demo offline (no API key required):
+
+```bash
+PYTHONPATH=. python examples/quick_start.py
+```
+
+---
+
 ## Modules
 
 ### LLM Evaluator — `evaluators/llm_evaluator.py`
@@ -205,7 +223,7 @@ tracker.assert_p95_sla()  # raises if p95 > 2000ms
 
 ## Regression Testing
 
-The regression suite in `tests/regression/test_prompt_regression.py` defines a `PROMPT_SUITE` of canonical question/answer/context triples with hardcoded `baseline_scores`.
+The regression suite in `tests/regression/test_prompt_regression.py` defines a `PROMPT_SUITE` of canonical question/answer/context triples with versioned `baseline_scores` committed alongside the tests.
 
 **In CI, `LLMEvaluator._call_llm` is monkeypatched** — baselines are returned deterministically, so regression tests run offline with no OpenAI key needed.
 
