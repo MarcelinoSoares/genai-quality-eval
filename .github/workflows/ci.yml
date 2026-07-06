@@ -135,7 +135,7 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt pytest-benchmark && pip install -e . --no-deps
+        run: pip install -r requirements.txt pytest-benchmark
 
       - name: Run latency benchmarks
         env:
