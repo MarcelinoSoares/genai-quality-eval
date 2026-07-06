@@ -14,10 +14,10 @@ from __future__ import annotations
 
 import time
 
-from evaluators.llm_evaluator import LLMEvaluator
-from hallucination.risk_detector import HallucinationDetector
-from metrics.latency.latency_tracker import LatencyTracker
-from rag.retrieval_validator import RetrievalValidator
+from genai_quality_eval.evaluators.llm_evaluator import LLMEvaluator
+from genai_quality_eval.hallucination.risk_detector import HallucinationDetector
+from genai_quality_eval.metrics.latency.latency_tracker import LatencyTracker
+from genai_quality_eval.rag.retrieval_validator import RetrievalValidator
 
 
 class _OfflineLLMEvaluator(LLMEvaluator):

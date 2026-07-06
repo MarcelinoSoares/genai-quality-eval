@@ -31,18 +31,24 @@ No web server. No database. Just composable modules that can run locally, inside
 
 ```
 genai-quality-eval/
-├── evaluators/
-│   └── llm_evaluator.py        # LLM-as-judge: relevance, coherence, faithfulness
-├── rag/
-│   └── retrieval_validator.py  # Precision@K, Recall@K, MRR, F1, context coverage
-├── metrics/latency/
-│   └── latency_tracker.py      # Context-manager timer · p50/p95/p99 · SLA assertions
-├── hallucination/
-│   └── risk_detector.py        # Token + n-gram overlap heuristics, no LLM required
+├── src/
+│   └── genai_quality_eval/
+│       ├── evaluators/
+│       │   └── llm_evaluator.py        # LLM-as-judge: relevance, coherence, faithfulness
+│       ├── rag/
+│       │   └── retrieval_validator.py  # Precision@K, Recall@K, MRR, F1, context coverage
+│       ├── metrics/latency/
+│       │   └── latency_tracker.py      # Context-manager timer · p50/p95/p99 · SLA assertions
+│       └── hallucination/
+│           └── risk_detector.py        # Token + n-gram overlap heuristics, no LLM required
 ├── tests/
 │   ├── unit/                   # Fast unit tests (no LLM calls)
 │   └── regression/
-│       └── test_prompt_regression.py   # Baseline regression suite
+│       └── test_prompt_regression.py   # Versioned baseline regression suite
+├── examples/
+│   └── quick_start.py          # Offline demo — all 4 modules, no API key required
+├── docs/
+│   └── design-decisions.md     # Engineering rationale for key architectural choices
 └── .github/workflows/ci.yml    # lint → unit → regression ‖ benchmarks → quality-gate
 ```
 
@@ -60,16 +66,16 @@ python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\act
 pip install -r requirements.txt
 
 # Run everything
-pytest tests/ -v --tb=short
+PYTHONPATH=src pytest tests/ -v --tb=short
 
 # Unit tests only (no LLM calls, runs offline)
-pytest tests/ --ignore=tests/regression -v --tb=short
+PYTHONPATH=src pytest tests/ --ignore=tests/regression -v --tb=short
 
 # Regression suite only
-pytest tests/regression/ -v --tb=long
+PYTHONPATH=src pytest tests/regression/ -v --tb=long
 
 # Filter by name
-pytest tests/ -k "latency or benchmark" -v
+PYTHONPATH=src pytest tests/ -k "latency or benchmark" -v
 ```
 
 ---
@@ -99,7 +105,7 @@ PYTHONPATH=. python examples/quick_start.py
 LLM-as-judge pattern. Calls an OpenAI model to score three dimensions and returns a structured result with a `passed` flag.
 
 ```python
-from evaluators.llm_evaluator import LLMEvaluator
+from genai_quality_eval.evaluators.llm_evaluator import LLMEvaluator
 
 evaluator = LLMEvaluator(model="gpt-4o", threshold=0.75)
 result = evaluator.evaluate(
@@ -128,7 +134,7 @@ print(result.latency_ms)    # 1243.7
 No LLM required. Measures how grounded an answer is in its context using token overlap and n-gram overlap heuristics.
 
 ```python
-from hallucination.risk_detector import HallucinationDetector
+from genai_quality_eval.hallucination.risk_detector import HallucinationDetector
 
 detector = HallucinationDetector(risk_threshold=0.30)
 result = detector.score(
@@ -163,7 +169,7 @@ Suspicious sentences (< 40% token overlap with context) are surfaced in `unverif
 Validates retrieval quality for RAG pipelines. Documents are matched by their `id` field (dict) or string identity.
 
 ```python
-from rag.retrieval_validator import RetrievalValidator
+from genai_quality_eval.rag.retrieval_validator import RetrievalValidator
 
 validator = RetrievalValidator(threshold=0.70)
 metrics = validator.evaluate(
@@ -199,7 +205,7 @@ print(metrics.passed)           # False  (F1 < threshold)
 Context-manager timer with percentile statistics and SLA enforcement. `SLAViolationError` (subclass of `AssertionError`) is raised on violation.
 
 ```python
-from metrics.latency.latency_tracker import LatencyTracker, SLAViolationError
+from genai_quality_eval.metrics.latency.latency_tracker import LatencyTracker, SLAViolationError
 
 tracker = LatencyTracker(sla_threshold_ms=2000)
 

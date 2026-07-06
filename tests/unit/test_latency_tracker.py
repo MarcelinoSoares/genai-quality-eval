@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from metrics.latency.latency_tracker import (
+from genai_quality_eval.metrics.latency.latency_tracker import (
     LatencyMeasurement,
     LatencyTracker,
     SLAViolationError,

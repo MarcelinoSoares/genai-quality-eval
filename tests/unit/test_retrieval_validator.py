@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from rag.retrieval_validator import RetrievalValidator
+from genai_quality_eval.rag.retrieval_validator import RetrievalValidator
 
 
 @pytest.fixture

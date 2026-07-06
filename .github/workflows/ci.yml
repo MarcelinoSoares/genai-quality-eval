@@ -37,7 +37,7 @@ jobs:
         run: ruff format --check .
 
       - name: Run mypy type checker
-        run: mypy evaluators/ rag/ metrics/ hallucination/ --ignore-missing-imports
+        run: mypy src/genai_quality_eval/ --ignore-missing-imports
 
   # -----------------------------------------------------------------------
   # Job 2: Unit Tests
@@ -60,17 +60,15 @@ jobs:
 
       - name: Run unit tests
         env:
-          PYTHONPATH: .
+          PYTHONPATH: src
+          REGRESSION_TOLERANCE: ${{ env.REGRESSION_TOLERANCE }}
         run: |
           pytest tests/ \
             --ignore=tests/regression \
             -v \
             --tb=short \
             --junitxml=reports/unit-tests.xml \
-            --cov=evaluators \
-            --cov=rag \
-            --cov=metrics \
-            --cov=hallucination \
+            --cov=genai_quality_eval \
             --cov-report=xml:reports/coverage.xml \
             --cov-report=term-missing
           code=$?
@@ -105,7 +103,7 @@ jobs:
 
       - name: Run regression tests
         env:
-          PYTHONPATH: .
+          PYTHONPATH: src
           REGRESSION_TOLERANCE: ${{ env.REGRESSION_TOLERANCE }}
         run: |
           pytest tests/regression/ \
@@ -141,7 +139,7 @@ jobs:
 
       - name: Run latency benchmarks
         env:
-          PYTHONPATH: .
+          PYTHONPATH: src
         run: |
           pytest tests/ \
             -k "latency or benchmark" \
