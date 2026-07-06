@@ -90,7 +90,7 @@ git clone https://github.com/MarcelinoSoares/genai-quality-eval.git
 cd genai-quality-eval
 
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -e ".[dev]"
 
 # Run everything
 pytest tests/ -v --tb=short
