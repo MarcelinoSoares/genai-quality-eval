@@ -4,7 +4,7 @@ Demonstrates all four evaluation modules:
   1. HallucinationDetector  — context-grounding heuristics
   2. RetrievalValidator     — RAG retrieval metrics
   3. LatencyTracker         — p50/p95/p99 SLA enforcement
-  4. LLMEvaluator           — LLM-as-judge (monkeypatched for offline demo)
+  4. LLMEvaluator           — LLM-as-judge (offline subclass, no API key)
 
 Run:
     PYTHONPATH=. python examples/quick_start.py
@@ -14,11 +14,30 @@ from __future__ import annotations
 
 import time
 
+from evaluators.llm_evaluator import LLMEvaluator
+from hallucination.risk_detector import HallucinationDetector
+from metrics.latency.latency_tracker import LatencyTracker
+from rag.retrieval_validator import RetrievalValidator
+
+
+class _OfflineLLMEvaluator(LLMEvaluator):
+    """Offline subclass — returns hardcoded scores, no API key needed."""
+
+    def _build_client(self):
+        return None
+
+    def _call_llm(self, prompt: str) -> float:
+        first_line = prompt.split("\n")[0].lower()
+        if "faithfully" in first_line or "faithfulness" in first_line:
+            return 0.95
+        if "coherence" in first_line:
+            return 0.88
+        return 0.92
+
+
 # ---------------------------------------------------------------------------
 # 1. Hallucination Detector
 # ---------------------------------------------------------------------------
-from hallucination.risk_detector import HallucinationDetector
-
 print("=" * 60)
 print("1. Hallucination Detector")
 print("=" * 60)
@@ -42,8 +61,6 @@ if hallucinated_result.unverified_claims:
 # ---------------------------------------------------------------------------
 # 2. RAG Retrieval Validator
 # ---------------------------------------------------------------------------
-from rag.retrieval_validator import RetrievalValidator
-
 print()
 print("=" * 60)
 print("2. RAG Retrieval Validator")
@@ -79,8 +96,6 @@ print(f"  [partial]  precision={partial_metrics.precision:.2f}  recall={partial_
 # ---------------------------------------------------------------------------
 # 3. Latency Tracker
 # ---------------------------------------------------------------------------
-from metrics.latency.latency_tracker import LatencyTracker
-
 print()
 print("=" * 60)
 print("3. Latency Tracker")
@@ -90,7 +105,7 @@ tracker = LatencyTracker(sla_threshold_ms=500)
 
 simulated_durations_ms = [120, 145, 132, 158, 143, 201, 178, 165, 149, 310]
 for duration_ms in simulated_durations_ms:
-    with tracker.measure() as m:
+    with tracker.measure() as m:  # noqa: F841
         time.sleep(duration_ms / 1000)
 
 report = tracker.report()
@@ -104,29 +119,12 @@ except Exception as e:
     print(f"  p95 SLA: FAILED — {e}")
 
 # ---------------------------------------------------------------------------
-# 4. LLM Evaluator (offline — monkeypatched)
+# 4. LLM Evaluator (offline demo)
 # ---------------------------------------------------------------------------
-from evaluators.llm_evaluator import LLMEvaluator
-
 print()
 print("=" * 60)
 print("4. LLM Evaluator (offline demo)")
 print("=" * 60)
-
-class _OfflineLLMEvaluator(LLMEvaluator):
-    """Offline subclass — returns hardcoded scores, no API key needed."""
-
-    def _build_client(self):
-        return None
-
-    def _call_llm(self, prompt: str) -> float:
-        first_line = prompt.split("\n")[0].lower()
-        if "faithfully" in first_line or "faithfulness" in first_line:
-            return 0.95
-        if "coherence" in first_line:
-            return 0.88
-        return 0.92
-
 
 evaluator = _OfflineLLMEvaluator(model="gpt-4o", threshold=0.75)
 
