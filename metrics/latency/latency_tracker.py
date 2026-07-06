@@ -3,13 +3,14 @@
 Measures end-to-end response time and enforces SLA thresholds.
 Supports context manager usage and percentile statistics across runs.
 """
+
 from __future__ import annotations
 
 import statistics
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Generator, List, Optional
+from typing import Generator, List
 
 
 class SLAViolationError(AssertionError):

@@ -1,189 +1,304 @@
 # GenAI Quality Evaluation Framework
 
-> LLM + RAG Testing, Latency, Accuracy & Regression
+> Production-ready quality gates for LLM · RAG · Latency · Hallucination · Regression
 
 [![CI](https://github.com/MarcelinoSoares/genai-quality-eval/actions/workflows/ci.yml/badge.svg)](https://github.com/MarcelinoSoares/genai-quality-eval/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
-A production-ready quality evaluation framework for **Generative AI systems**, covering LLM response assessment, RAG/retrieval validation, prompt regression testing, latency metrics, accuracy scoring, and hallucination risk detection — with a fully automated CI/CD pipeline.
+A **pure-Python** evaluation framework for Generative AI systems. No web server, no database — just composable modules you drop into any LLM pipeline or CI workflow to measure, guard, and regression-test response quality.
 
 ---
 
-## Features
+## Why this framework?
 
-| Module | Description |
+| Problem | Solution |
 |---|---|
-| `evaluators/` | LLM response quality scoring (relevance, coherence, faithfulness) |
-| `tests/regression/` | Prompt regression tests — detect quality degradation across model versions |
-| `rag/` | RAG pipeline validation: retrieval precision, context coverage, answer grounding |
-| `metrics/latency/` | End-to-end latency measurement and SLA threshold assertions |
-| `metrics/accuracy/` | Accuracy, F1, BLEU, ROUGE and semantic similarity scoring |
-| `hallucination/` | Hallucination risk detection via fact-checking and confidence calibration |
-| `.github/workflows/` | CI/CD pipeline running all evaluations on every push/PR |
+| "Did the model regress after the upgrade?" | Prompt regression suite with hardcoded baselines and ≤ 5% tolerance |
+| "Is this answer hallucinated?" | Heuristic context-grounding score, no LLM required |
+| "Are we hitting our latency SLA?" | Context-manager tracker with p50/p95/p99 and `assert_sla()` |
+| "How good is our RAG retrieval?" | Precision@K, Recall@K, MRR, F1, and context coverage in one call |
+| "What does the judge score say?" | LLM-as-judge with relevance, coherence, and faithfulness |
 
 ---
 
-## Project Structure
+## Architecture
 
 ```
 genai-quality-eval/
 ├── evaluators/
-│   ├── llm_evaluator.py        # LLM response quality scorer
-│   ├── coherence_checker.py    # Coherence & relevance checks
-│   └── faithfulness_scorer.py  # Answer faithfulness to context
+│   └── llm_evaluator.py        # LLM-as-judge: relevance, coherence, faithfulness
 ├── rag/
-│   ├── retrieval_validator.py  # Retrieval precision & recall
-│   ├── context_coverage.py     # Context coverage metrics
-│   └── answer_grounding.py     # Answer grounding verification
-├── metrics/
-│   ├── latency/
-│   │   ├── latency_tracker.py  # Response time measurement
-│   │   └── sla_assertions.py   # SLA threshold enforcement
-│   └── accuracy/
-│       ├── semantic_scorer.py  # Semantic similarity (cosine/BERTScore)
-│       └── nlp_metrics.py      # BLEU, ROUGE, F1 computation
+│   └── retrieval_validator.py  # Precision@K, Recall@K, MRR, F1, context coverage
+├── metrics/latency/
+│   └── latency_tracker.py      # Context-manager timer · p50/p95/p99 · SLA assertions
 ├── hallucination/
-│   ├── risk_detector.py        # Hallucination risk scoring
-│   └── fact_checker.py         # Fact-checking pipeline
+│   └── risk_detector.py        # Token + n-gram overlap heuristics, no LLM required
 ├── tests/
-│   ├── regression/
-│   │   ├── test_prompt_regression.py
-│   │   └── prompt_snapshots/   # Baseline prompt snapshots
-│   ├── test_evaluators.py
-│   ├── test_rag.py
-│   ├── test_metrics.py
-│   └── test_hallucination.py
-├── .github/
-│   └── workflows/
-│       └── ci.yml              # CI/CD pipeline
-├── pyproject.toml
-├── requirements.txt
-└── README.md
+│   ├── unit/                   # Fast unit tests (no LLM calls)
+│   └── regression/
+│       └── test_prompt_regression.py   # Baseline regression suite
+└── .github/workflows/ci.yml    # lint → unit → regression ‖ benchmarks → quality-gate
 ```
+
+Each module is **independently usable** — import only what you need.
 
 ---
 
 ## Quickstart
 
 ```bash
-# Clone the repo
 git clone https://github.com/MarcelinoSoares/genai-quality-eval.git
 cd genai-quality-eval
 
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-
-# Install dependencies
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# Run all tests
+# Run everything
 pytest tests/ -v --tb=short
 
-# Run only regression tests
-pytest tests/regression/ -v
+# Unit tests only (no LLM calls, runs offline)
+pytest tests/ --ignore=tests/regression -v --tb=short
 
-# Run with latency report
-pytest tests/ -v --benchmark-autosave
+# Regression suite only
+pytest tests/regression/ -v --tb=long
+
+# Filter by name
+pytest tests/ -k "latency or benchmark" -v
 ```
 
 ---
 
-## Evaluation Modules
+## Modules
 
-### LLM Response Evaluator
+### LLM Evaluator — `evaluators/llm_evaluator.py`
+
+LLM-as-judge pattern. Calls an OpenAI model to score three dimensions and returns a structured result with a `passed` flag.
 
 ```python
 from evaluators.llm_evaluator import LLMEvaluator
 
-evaluator = LLMEvaluator(model="gpt-4o")
+evaluator = LLMEvaluator(model="gpt-4o", threshold=0.75)
 result = evaluator.evaluate(
     question="What is RAG?",
-    answer="RAG stands for Retrieval-Augmented Generation...",
-    context="..."
+    answer="RAG enhances LLMs by retrieving relevant documents as context.",
+    context="RAG combines retrieval systems with language models...",
 )
-print(result.scores)  # {relevance: 0.92, coherence: 0.88, faithfulness: 0.95}
+
+print(result.scores)        # {"relevance": 0.92, "coherence": 0.88, "faithfulness": 0.95}
+print(result.average_score) # 0.916
+print(result.passed)        # True  (average >= threshold)
+print(result.latency_ms)    # 1243.7
 ```
 
-### RAG Validation
+**Scores:**
+- `relevance` — how well the answer addresses the question
+- `coherence` — logical structure and readability
+- `faithfulness` — factual grounding relative to provided context (only scored when `context` is supplied)
 
-```python
-from rag.retrieval_validator import RetrievalValidator
+`passed = average_score >= threshold` (default `0.75`)
 
-validator = RetrievalValidator()
-metrics = validator.evaluate(
-    query="Explain transformer architecture",
-    retrieved_docs=[...],
-    ground_truth_docs=[...]
-)
-print(metrics)  # {precision: 0.85, recall: 0.90, mrr: 0.87}
-```
+---
 
-### Latency Tracking
+### Hallucination Detector — `hallucination/risk_detector.py`
 
-```python
-from metrics.latency.latency_tracker import LatencyTracker
-
-tracker = LatencyTracker(sla_threshold_ms=2000)
-with tracker.measure() as m:
-    response = llm.generate(prompt)
-
-m.assert_sla()  # Raises AssertionError if > 2000ms
-print(m.duration_ms)  # e.g. 1430.5
-```
-
-### Hallucination Risk Detection
+No LLM required. Measures how grounded an answer is in its context using token overlap and n-gram overlap heuristics.
 
 ```python
 from hallucination.risk_detector import HallucinationDetector
 
-detector = HallucinationDetector()
-risk = detector.score(
+detector = HallucinationDetector(risk_threshold=0.30)
+result = detector.score(
     answer="The Eiffel Tower was built in 1850.",
-    context="The Eiffel Tower was completed in 1889."
+    context="The Eiffel Tower was completed in 1889.",
 )
-print(risk)  # {risk_score: 0.91, risk_level: "HIGH"}
+
+print(result.risk_score)        # 0.73
+print(result.risk_level)        # RiskLevel.HIGH
+print(result.unverified_claims) # ["The Eiffel Tower was built in 1850."]
+print(result.passed)            # False  (risk_score >= threshold)
 ```
+
+**Risk score formula:**
+
+```
+risk_score = 0.9 × token_ungroundedness + 0.1 × ngram_ungroundedness
+```
+
+| Risk Level | Score Range |
+|---|---|
+| LOW | < 0.30 |
+| MEDIUM | 0.30 – 0.59 |
+| HIGH | ≥ 0.60 |
+
+Suspicious sentences (< 40% token overlap with context) are surfaced in `unverified_claims`.
+
+---
+
+### RAG Retrieval Validator — `rag/retrieval_validator.py`
+
+Validates retrieval quality for RAG pipelines. Documents are matched by their `id` field (dict) or string identity.
+
+```python
+from rag.retrieval_validator import RetrievalValidator
+
+validator = RetrievalValidator(threshold=0.70)
+metrics = validator.evaluate(
+    query="Explain transformer architecture",
+    retrieved_docs=[{"id": "doc1", "content": "..."}],
+    ground_truth_docs=[{"id": "doc1", "content": "..."}, {"id": "doc2", "content": "..."}],
+)
+
+print(metrics.precision)        # 1.0
+print(metrics.recall)           # 0.5
+print(metrics.mrr)              # 1.0
+print(metrics.f1)               # 0.6667
+print(metrics.context_coverage) # 0.84
+print(metrics.passed)           # False  (F1 < threshold)
+```
+
+**Metrics computed:**
+
+| Metric | Description |
+|---|---|
+| `precision` | Fraction of retrieved docs that are relevant |
+| `recall` | Fraction of relevant docs that were retrieved |
+| `mrr` | Mean Reciprocal Rank — rank of the first relevant result |
+| `f1` | Harmonic mean of precision and recall |
+| `context_coverage` | Token-overlap coverage of retrieved vs ground-truth text |
+
+`passed = f1 >= threshold` (default `0.70`)
+
+---
+
+### Latency Tracker — `metrics/latency/latency_tracker.py`
+
+Context-manager timer with percentile statistics and SLA enforcement. `SLAViolationError` (subclass of `AssertionError`) is raised on violation.
+
+```python
+from metrics.latency.latency_tracker import LatencyTracker, SLAViolationError
+
+tracker = LatencyTracker(sla_threshold_ms=2000)
+
+for prompt in prompts:
+    with tracker.measure() as m:
+        response = llm.generate(prompt)
+    m.assert_sla()  # raises SLAViolationError if this call exceeded 2000ms
+
+# Aggregate stats after N calls
+report = tracker.report()
+# {
+#   "count": 50, "mean_ms": 1320.4,
+#   "p50_ms": 1280.0, "p95_ms": 1890.0, "p99_ms": 2100.0,
+#   "sla_threshold_ms": 2000.0, "sla_violations": 1
+# }
+
+tracker.assert_p95_sla()  # raises if p95 > 2000ms
+```
+
+---
+
+## Regression Testing
+
+The regression suite in `tests/regression/test_prompt_regression.py` defines a `PROMPT_SUITE` of canonical question/answer/context triples with hardcoded `baseline_scores`.
+
+**In CI, `LLMEvaluator._call_llm` is monkeypatched** — baselines are returned deterministically, so regression tests run offline with no OpenAI key needed.
+
+A test fails when any score drops more than `REGRESSION_TOLERANCE` (default 5%) below its baseline:
+
+```
+Regression detected in 'faithfulness':
+  baseline=0.880, current=0.820, drop=0.060 (tolerance=5%)
+```
+
+To update baselines after an intentional model change, use the `update-baselines` skill in Claude Code or set the `REGRESSION_TOLERANCE` env var:
+
+```bash
+REGRESSION_TOLERANCE=0.10 pytest tests/regression/ -v   # 10% tolerance
+```
+
+**Three test classes run per suite entry:**
+
+| Test | What it checks |
+|---|---|
+| `test_score_regression_against_baseline` | Scores must not drop > 5% vs hardcoded baselines |
+| `test_hallucination_regression` | Hallucination risk must stay below HIGH (< 0.60) |
+| `test_rag_retrieval_regression` | RAG Precision, Recall, F1 must all meet ≥ 0.70 |
 
 ---
 
 ## CI/CD Pipeline
 
-Every push and pull request triggers the full evaluation suite:
+Every push to `main` / `develop` and every pull request triggers the full evaluation pipeline:
 
 ```
-[Push/PR] → [Lint & Type Check] → [Unit Tests] → [Regression Tests] → [Metrics Report] → [Quality Gate]
+[Push / PR]
+    │
+    ▼
+[1] Lint & Type Check          ruff check · ruff format · mypy
+    │
+    ▼
+[2] Unit Tests                 pytest tests/ --ignore=tests/regression
+    │                          coverage reports uploaded as artifacts
+    ├───────────────────────────────────────┐
+    ▼                                       ▼
+[3] Prompt Regression Tests     [4] Latency Benchmarks
+    pytest tests/regression/        pytest -k "latency or benchmark"
+    REGRESSION_TOLERANCE=0.05       pytest-benchmark --benchmark-json
+    │                                       │
+    └──────────────────┬────────────────────┘
+                       ▼
+               [5] Quality Gate
+                   Summary report to GitHub Step Summary
 ```
 
-Quality gate thresholds (configurable in `pyproject.toml`):
-- Minimum faithfulness score: **0.80**
-- Maximum latency p95: **3000ms**
-- Hallucination risk threshold: **< 0.30**
-- Prompt regression tolerance: **5%** degradation
+Jobs 3 and 4 run in parallel after unit tests pass.
+
+### Quality gate thresholds
+
+| Metric | Threshold |
+|---|---|
+| Faithfulness | ≥ 0.80 |
+| Hallucination risk | < 0.30 |
+| Latency p95 | ≤ 3000 ms |
+| Prompt regression | ≤ 5% degradation |
+| RAG retrieval F1 | ≥ 0.70 |
 
 ---
 
 ## Tech Stack
 
-- **Python 3.11+**
-- **pytest** + **pytest-benchmark** — test runner & latency benchmarks
-- **LangChain** — LLM & RAG orchestration
-- **sentence-transformers** — semantic similarity
-- **evaluate** (HuggingFace) — BLEU, ROUGE, BERTScore
-- **OpenAI / Anthropic / Ollama** — LLM provider adapters
-- **GitHub Actions** — CI/CD automation
+| Layer | Libraries |
+|---|---|
+| LLM providers | `openai`, `anthropic` |
+| RAG orchestration | `langchain`, `langchain-openai` |
+| Semantic similarity | `sentence-transformers` |
+| NLP metrics | `evaluate` (HuggingFace), `rouge-score`, `nltk` |
+| Testing | `pytest`, `pytest-cov`, `pytest-benchmark`, `pytest-mock` |
+| Linting / types | `ruff`, `mypy` |
+| Utilities | `numpy`, `pandas`, `rich`, `python-dotenv` |
+| CI | GitHub Actions |
+
+---
+
+## Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `OPENAI_API_KEY` | — | Required for `LLMEvaluator` in live mode |
+| `REGRESSION_TOLERANCE` | `0.05` | Maximum allowed score drop in regression tests |
 
 ---
 
 ## Author
 
-**Marcelino Soares de Oliveira**  
-QA at Thoughtworks | Agile Testing Specialist | Doctor in Computer Science  
+**Marcelino Soares de Oliveira**
+QA at Thoughtworks · Agile Testing Specialist · Doctor in Computer Science
 [LinkedIn](https://www.linkedin.com/in/marcelinosoares) · [GitHub](https://github.com/MarcelinoSoares)
 
 ---
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+MIT — see [LICENSE](LICENSE) for details.
