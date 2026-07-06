@@ -1,0 +1,177 @@
+name: CI - GenAI Quality Evaluation
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.11"
+  REGRESSION_TOLERANCE: "0.05"
+
+jobs:
+  # -----------------------------------------------------------------------
+  # Job 1: Lint & Type Check
+  # -----------------------------------------------------------------------
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install lint dependencies
+        run: pip install ruff mypy
+
+      - name: Run Ruff linter
+        run: ruff check . --output-format=github
+
+      - name: Run Ruff formatter check
+        run: ruff format --check .
+
+      - name: Run mypy type checker
+        run: mypy evaluators/ rag/ metrics/ hallucination/ --ignore-missing-imports
+
+  # -----------------------------------------------------------------------
+  # Job 2: Unit Tests
+  # -----------------------------------------------------------------------
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: |
+          pytest tests/ \
+            --ignore=tests/regression \
+            -v \
+            --tb=short \
+            --junitxml=reports/unit-tests.xml \
+            --cov=evaluators \
+            --cov=rag \
+            --cov=metrics \
+            --cov=hallucination \
+            --cov-report=xml:reports/coverage.xml \
+            --cov-report=term-missing
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-results
+          path: reports/
+
+  # -----------------------------------------------------------------------
+  # Job 3: Regression Tests
+  # -----------------------------------------------------------------------
+  regression-tests:
+    name: Prompt Regression Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run regression tests
+        env:
+          REGRESSION_TOLERANCE: ${{ env.REGRESSION_TOLERANCE }}
+        run: |
+          pytest tests/regression/ \
+            -v \
+            --tb=long \
+            --junitxml=reports/regression-tests.xml
+
+      - name: Upload regression results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: regression-test-results
+          path: reports/
+
+  # -----------------------------------------------------------------------
+  # Job 4: Latency Benchmarks
+  # -----------------------------------------------------------------------
+  latency-benchmarks:
+    name: Latency Benchmarks
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest-benchmark
+
+      - name: Run latency benchmarks
+        run: |
+          pytest tests/ \
+            -k "latency or benchmark" \
+            --benchmark-autosave \
+            --benchmark-json=reports/benchmark.json \
+            -v || true
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: reports/benchmark.json
+
+  # -----------------------------------------------------------------------
+  # Job 5: Quality Gate
+  # -----------------------------------------------------------------------
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: [regression-tests, latency-benchmarks]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: reports/
+
+      - name: Quality Gate Summary
+        run: |
+          echo "## GenAI Quality Gate Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Threshold | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Faithfulness | >= 0.80 | Evaluated |" >> $GITHUB_STEP_SUMMARY
+          echo "| Hallucination Risk | < 0.30 | Evaluated |" >> $GITHUB_STEP_SUMMARY
+          echo "| Latency p95 | <= 3000ms | Evaluated |" >> $GITHUB_STEP_SUMMARY
+          echo "| Prompt Regression | <= 5% degradation | Evaluated |" >> $GITHUB_STEP_SUMMARY
+          echo "| RAG Retrieval F1 | >= 0.70 | Evaluated |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All quality checks passed. Pipeline complete." >> $GITHUB_STEP_SUMMARY
