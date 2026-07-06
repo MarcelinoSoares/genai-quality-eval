@@ -1,13 +1,17 @@
 # GenAI Quality Evaluation Framework
 
-> Production-ready quality gates for LLM · RAG · Latency · Hallucination · Regression
+> CI-ready quality gates for LLM · RAG · Latency · Hallucination · Regression
 
 [![CI](https://github.com/MarcelinoSoares/genai-quality-eval/actions/workflows/ci.yml/badge.svg)](https://github.com/MarcelinoSoares/genai-quality-eval/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
-A **pure-Python** evaluation framework for Generative AI systems. No web server, no database — just composable modules you drop into any LLM pipeline or CI workflow to measure, guard, and regression-test response quality.
+A **pure-Python** evaluation framework for Generative AI systems, designed to bring Quality Engineering practices into LLM and RAG delivery pipelines.
+
+It provides modular evaluators for response quality, hallucination risk, retrieval accuracy, latency SLAs, and prompt regression testing — so teams can detect regressions, enforce quality thresholds, and make GenAI releases more reliable.
+
+No web server. No database. Just composable modules that drop into any LLM pipeline or CI workflow.
 
 ---
 
@@ -212,7 +216,7 @@ Regression detected in 'faithfulness':
   baseline=0.880, current=0.820, drop=0.060 (tolerance=5%)
 ```
 
-To update baselines after an intentional model change, use the `update-baselines` skill in Claude Code or set the `REGRESSION_TOLERANCE` env var:
+To update baselines after an intentional model change, regenerate the baseline scores, review the diff, and commit the updated values. Use `REGRESSION_TOLERANCE` to widen the tolerance window during transition:
 
 ```bash
 REGRESSION_TOLERANCE=0.10 pytest tests/regression/ -v   # 10% tolerance
@@ -225,6 +229,17 @@ REGRESSION_TOLERANCE=0.10 pytest tests/regression/ -v   # 10% tolerance
 | `test_score_regression_against_baseline` | Scores must not drop > 5% vs hardcoded baselines |
 | `test_hallucination_regression` | Hallucination risk must stay below HIGH (< 0.60) |
 | `test_rag_retrieval_regression` | RAG Precision, Recall, F1 must all meet ≥ 0.70 |
+
+---
+
+## Quality Engineering Use Cases
+
+- Detect prompt regressions after model, prompt, or retrieval changes
+- Enforce latency SLAs for GenAI features in CI/CD pipelines
+- Validate RAG retrieval quality before production deployment
+- Identify hallucination risk using context-grounding heuristics
+- Compare LLM response quality across versions or providers
+- Generate quality signals for release readiness decisions
 
 ---
 
@@ -286,7 +301,8 @@ Jobs 3 and 4 run in parallel after unit tests pass.
 
 | Variable | Default | Description |
 |---|---|---|
-| `OPENAI_API_KEY` | — | Required for `LLMEvaluator` in live mode |
+| `OPENAI_API_KEY` | — | Required for `LLMEvaluator` in live mode (OpenAI) |
+| `ANTHROPIC_API_KEY` | — | Required for Anthropic models in live mode |
 | `REGRESSION_TOLERANCE` | `0.05` | Maximum allowed score drop in regression tests |
 
 ---
@@ -294,7 +310,7 @@ Jobs 3 and 4 run in parallel after unit tests pass.
 ## Author
 
 **Marcelino Soares de Oliveira**
-QA at Thoughtworks · Agile Testing Specialist · Doctor in Computer Science
+Senior SDET / Quality Engineer at Thoughtworks · GenAI Quality · Test Automation · CI/CD
 [LinkedIn](https://www.linkedin.com/in/marcelinosoares) · [GitHub](https://github.com/MarcelinoSoares)
 
 ---
