@@ -16,8 +16,6 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List
 
-from nltk.stem import PorterStemmer
-
 _STOPWORDS = frozenset(
     {
         "a",
@@ -86,6 +84,14 @@ class HallucinationResult:
     passed: bool  # True when risk_score < threshold
 
 
+def _stem(word: str) -> str:
+    """Minimal suffix-stripping stemmer (handles the most common English endings)."""
+    for suffix in ("ing", "tion", "tions", "ness", "ment", "ments", "ed", "ly", "er", "es", "s"):
+        if word.endswith(suffix) and len(word) - len(suffix) >= 3:
+            return word[: -len(suffix)]
+    return word
+
+
 class HallucinationDetector:
     """Detects hallucination risk using context-grounding analysis."""
 
@@ -96,7 +102,6 @@ class HallucinationDetector:
     ) -> None:
         self.risk_threshold = risk_threshold
         self.min_ngram = min_ngram
-        self._stemmer = PorterStemmer()
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -104,7 +109,7 @@ class HallucinationDetector:
 
     def _tokenize(self, text: str) -> List[str]:
         tokens = re.sub(r"[^\w\s-]", "", text.lower()).split()
-        return [self._stemmer.stem(t) for t in tokens if t not in _STOPWORDS]
+        return [_stem(t) for t in tokens if t not in _STOPWORDS]
 
     def _ngrams(self, tokens: List[str], n: int) -> set:
         return {tuple(tokens[i : i + n]) for i in range(len(tokens) - n + 1)}
