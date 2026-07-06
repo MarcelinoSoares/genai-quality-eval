@@ -86,7 +86,7 @@ class HallucinationResult:
 
 def _stem(word: str) -> str:
     """Minimal suffix-stripping stemmer (handles the most common English endings)."""
-    for suffix in ("ing", "tion", "tions", "ness", "ment", "ments", "ed", "ly", "er", "es", "s"):
+    for suffix in ("ing", "tions", "ion", "ness", "ment", "ments", "al", "ed", "ly", "er", "es", "e", "s"):
         if word.endswith(suffix) and len(word) - len(suffix) >= 3:
             return word[: -len(suffix)]
     return word
