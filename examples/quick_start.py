@@ -48,13 +48,17 @@ grounded_result = detector.score(
     answer="RAG combines retrieval systems with language models to ground responses in retrieved documents.",
     context="Retrieval-Augmented Generation (RAG) enhances language models by fetching relevant documents at inference time and including them as context.",
 )
-print(f"  [grounded]    risk_score={grounded_result.risk_score:.3f}  level={grounded_result.risk_level.value}  passed={grounded_result.passed}")
+print(
+    f"  [grounded]    risk_score={grounded_result.risk_score:.3f}  level={grounded_result.risk_level.value}  passed={grounded_result.passed}"
+)
 
 hallucinated_result = detector.score(
     answer="The Eiffel Tower was built in 1850 by Napoleon Bonaparte as a military fortress.",
     context="The Eiffel Tower was completed in 1889 and designed by Gustave Eiffel as the entrance arch for the 1889 World's Fair.",
 )
-print(f"  [hallucinated] risk_score={hallucinated_result.risk_score:.3f}  level={hallucinated_result.risk_level.value}  passed={hallucinated_result.passed}")
+print(
+    f"  [hallucinated] risk_score={hallucinated_result.risk_score:.3f}  level={hallucinated_result.risk_level.value}  passed={hallucinated_result.passed}"
+)
 if hallucinated_result.unverified_claims:
     print(f"  unverified: {hallucinated_result.unverified_claims[0][:80]}")
 
@@ -71,27 +75,52 @@ validator = RetrievalValidator(threshold=0.70)
 perfect_metrics = validator.evaluate(
     query="Explain transformer architecture",
     retrieved_docs=[
-        {"id": "doc1", "content": "Transformers use self-attention mechanisms to process sequences in parallel."},
-        {"id": "doc2", "content": "The encoder-decoder structure allows transformers to handle sequence-to-sequence tasks."},
+        {
+            "id": "doc1",
+            "content": "Transformers use self-attention mechanisms to process sequences in parallel.",
+        },
+        {
+            "id": "doc2",
+            "content": "The encoder-decoder structure allows transformers to handle sequence-to-sequence tasks.",
+        },
     ],
     ground_truth_docs=[
-        {"id": "doc1", "content": "Transformers use self-attention mechanisms to process sequences in parallel."},
-        {"id": "doc2", "content": "The encoder-decoder structure allows transformers to handle sequence-to-sequence tasks."},
+        {
+            "id": "doc1",
+            "content": "Transformers use self-attention mechanisms to process sequences in parallel.",
+        },
+        {
+            "id": "doc2",
+            "content": "The encoder-decoder structure allows transformers to handle sequence-to-sequence tasks.",
+        },
     ],
 )
-print(f"  [perfect]  precision={perfect_metrics.precision:.2f}  recall={perfect_metrics.recall:.2f}  f1={perfect_metrics.f1:.2f}  passed={perfect_metrics.passed}")
+print(
+    f"  [perfect]  precision={perfect_metrics.precision:.2f}  recall={perfect_metrics.recall:.2f}  f1={perfect_metrics.f1:.2f}  passed={perfect_metrics.passed}"
+)
 
 partial_metrics = validator.evaluate(
     query="Explain transformer architecture",
     retrieved_docs=[
-        {"id": "doc1", "content": "Transformers use self-attention mechanisms to process sequences in parallel."},
+        {
+            "id": "doc1",
+            "content": "Transformers use self-attention mechanisms to process sequences in parallel.",
+        },
     ],
     ground_truth_docs=[
-        {"id": "doc1", "content": "Transformers use self-attention mechanisms to process sequences in parallel."},
-        {"id": "doc2", "content": "The encoder-decoder structure allows transformers to handle sequence-to-sequence tasks."},
+        {
+            "id": "doc1",
+            "content": "Transformers use self-attention mechanisms to process sequences in parallel.",
+        },
+        {
+            "id": "doc2",
+            "content": "The encoder-decoder structure allows transformers to handle sequence-to-sequence tasks.",
+        },
     ],
 )
-print(f"  [partial]  precision={partial_metrics.precision:.2f}  recall={partial_metrics.recall:.2f}  f1={partial_metrics.f1:.2f}  passed={partial_metrics.passed}")
+print(
+    f"  [partial]  precision={partial_metrics.precision:.2f}  recall={partial_metrics.recall:.2f}  f1={partial_metrics.f1:.2f}  passed={partial_metrics.passed}"
+)
 
 # ---------------------------------------------------------------------------
 # 3. Latency Tracker
@@ -109,8 +138,12 @@ for duration_ms in simulated_durations_ms:
         time.sleep(duration_ms / 1000)
 
 report = tracker.report()
-print(f"  calls={report['count']}  mean={report['mean_ms']:.1f}ms  p50={report['p50_ms']:.1f}ms  p95={report['p95_ms']:.1f}ms  p99={report['p99_ms']:.1f}ms")
-print(f"  sla_threshold={report['sla_threshold_ms']:.0f}ms  violations={report['sla_violations']}")
+print(
+    f"  calls={report['count']}  mean={report['mean_ms']:.1f}ms  p50={report['p50_ms']:.1f}ms  p95={report['p95_ms']:.1f}ms  p99={report['p99_ms']:.1f}ms"
+)
+print(
+    f"  sla_threshold={report['sla_threshold_ms']:.0f}ms  violations={report['sla_violations']}"
+)
 
 try:
     tracker.assert_p95_sla()
