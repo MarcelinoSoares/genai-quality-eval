@@ -8,11 +8,66 @@ Risk levels:
   MEDIUM : 0.30 <= score < 0.60
   HIGH   : score >= 0.60
 """
+
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional
+from typing import List
+
+from nltk.stem import PorterStemmer
+
+_STOPWORDS = frozenset(
+    {
+        "a",
+        "an",
+        "the",
+        "and",
+        "or",
+        "but",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "to",
+        "of",
+        "in",
+        "for",
+        "on",
+        "with",
+        "at",
+        "by",
+        "from",
+        "as",
+        "it",
+        "its",
+        "that",
+        "this",
+        "which",
+        "so",
+        "can",
+        "not",
+        "more",
+        "they",
+        "them",
+        "their",
+        "then",
+        "than",
+        "when",
+        "what",
+        "how",
+    }
+)
 
 
 class RiskLevel(str, Enum):
@@ -41,13 +96,15 @@ class HallucinationDetector:
     ) -> None:
         self.risk_threshold = risk_threshold
         self.min_ngram = min_ngram
+        self._stemmer = PorterStemmer()
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 
     def _tokenize(self, text: str) -> List[str]:
-        return text.lower().split()
+        tokens = re.sub(r"[^\w\s-]", "", text.lower()).split()
+        return [self._stemmer.stem(t) for t in tokens if t not in _STOPWORDS]
 
     def _ngrams(self, tokens: List[str], n: int) -> set:
         return {tuple(tokens[i : i + n]) for i in range(len(tokens) - n + 1)}
@@ -74,7 +131,9 @@ class HallucinationDetector:
         """Return sentences whose tokens are poorly covered by context."""
         context_tokens = set(self._tokenize(context))
         suspicious = []
-        for sentence in answer.replace(".", ".|").replace("!", "!|").replace("?", "?|").split("|"):
+        for sentence in (
+            answer.replace(".", ".|").replace("!", "!|").replace("?", "?|").split("|")
+        ):
             sentence = sentence.strip()
             if not sentence:
                 continue
@@ -114,8 +173,9 @@ class HallucinationDetector:
         token_score = self._token_overlap_score(answer, context)
         ngram_score = self._ngram_overlap_score(answer, context, n=self.min_ngram)
 
-        # Weighted combination: token overlap is a stronger signal
-        risk_score = round(0.6 * token_score + 0.4 * ngram_score, 4)
+        # Weighted combination: token overlap is the primary signal;
+        # n-gram overlap adds signal only for near-verbatim hallucinations.
+        risk_score = round(0.9 * token_score + 0.1 * ngram_score, 4)
         risk_level = self._classify_risk(risk_score)
         unverified = self._extract_suspicious_sentences(answer, context)
 

@@ -6,10 +6,11 @@ Measures retrieval quality for Retrieval-Augmented Generation pipelines:
 - Mean Reciprocal Rank (MRR): rank of the first relevant document
 - Context Coverage: semantic coverage of retrieved context vs ground truth
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List
 
 
 @dataclass

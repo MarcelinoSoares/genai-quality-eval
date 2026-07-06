@@ -5,6 +5,7 @@ Scores LLM responses across three dimensions:
 - Coherence: logical structure and readability
 - Faithfulness: factual grounding relative to provided context
 """
+
 from __future__ import annotations
 
 import time
@@ -59,6 +60,7 @@ class LLMEvaluator:
         """Build the LLM client. Override to inject custom clients in tests."""
         try:
             from openai import OpenAI  # type: ignore
+
             return OpenAI()
         except ImportError:
             return None
