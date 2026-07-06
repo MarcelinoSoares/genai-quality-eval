@@ -17,9 +17,9 @@ from typing import Dict, List
 
 import pytest
 
-from evaluators.llm_evaluator import LLMEvaluator
-from hallucination.risk_detector import HallucinationDetector
-from rag.retrieval_validator import RetrievalValidator
+from genai_quality_eval.evaluators.llm_evaluator import LLMEvaluator
+from genai_quality_eval.hallucination.risk_detector import HallucinationDetector
+from genai_quality_eval.rag.retrieval_validator import RetrievalValidator
 
 # ---------------------------------------------------------------------------
 # Fixtures

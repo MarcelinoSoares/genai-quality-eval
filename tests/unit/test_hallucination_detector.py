@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from hallucination.risk_detector import HallucinationDetector, RiskLevel
+from genai_quality_eval.hallucination.risk_detector import (
+    HallucinationDetector,
+    RiskLevel,
+)
 
 
 @pytest.fixture

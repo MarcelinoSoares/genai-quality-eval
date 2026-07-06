@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from evaluators.llm_evaluator import EvaluationResult, LLMEvaluator
+from genai_quality_eval.evaluators.llm_evaluator import EvaluationResult, LLMEvaluator
 
 
 def test_average_score_empty_scores():
