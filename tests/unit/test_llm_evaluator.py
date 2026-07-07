@@ -231,7 +231,9 @@ def test_evaluate_returns_failed_result_on_parse_error(monkeypatch):
     monkeypatch.setattr(
         LLMEvaluator,
         "_call_llm",
-        lambda self, p: (_ for _ in ()).throw(LLMParseError("Cannot extract score from: 'excellent!'")),
+        lambda self, p: (_ for _ in ()).throw(
+            LLMParseError("Cannot extract score from: 'excellent!'")
+        ),
     )
 
     evaluator = LLMEvaluator(model="gpt-4o")
